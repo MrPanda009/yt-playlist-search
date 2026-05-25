@@ -14,17 +14,18 @@ ytd-browse {
 }
 
 #ypt-search-bar.ypt-inline {
-	position: static;
-	display: flex;
-	align-items: center;
-	gap: 8px;
+	position: relative;
+	top: auto;
+	display: block;
+	flex: 1;
+	width: auto;
+	margin: 0 0 0 12px;
 	padding: 0;
-	margin-left: 8px;
 	background: transparent;
-	border-bottom: none;
 	box-shadow: none;
-	flex: 0 1 auto;
+	border-bottom: none;
 }
+
 
 #ypt-search-input {
 	width: 100%;
@@ -39,10 +40,10 @@ ytd-browse {
 }
 
 #ypt-search-bar.ypt-inline #ypt-search-input {
-	width: 170px;
-	padding: 6px 10px;
+	width: 100%;
+	padding: 6px 145px 6px 12px;
 	font-size: 12px;
-	border-radius: 12px;
+	border-radius: 14px;
 }
 
 #ypt-search-input::placeholder {
@@ -66,8 +67,12 @@ ytd-browse {
 }
 
 #ypt-search-bar.ypt-inline #ypt-search-actions {
-	position: static;
-	transform: none;
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
 	gap: 4px;
 }
 
@@ -112,10 +117,11 @@ ytd-browse {
 
 #ypt-search-bar.ypt-inline #ypt-search-load,
 #ypt-search-bar.ypt-inline #ypt-search-stop {
-	height: 20px;
-	padding: 0 6px;
-	font-size: 10px;
-	line-height: 18px;
+	height: 18px;
+	line-height: 16px;
+	padding: 0 5px;
+	font-size: 9px;
+	border-radius: 9px;
 }
 
 #ypt-search-load:hover:not(:disabled) {
@@ -153,10 +159,11 @@ ytd-browse {
 
 #ypt-search-bar.ypt-inline #ypt-search-prev,
 #ypt-search-bar.ypt-inline #ypt-search-next {
-	width: 18px;
-	height: 18px;
-	font-size: 11px;
-	line-height: 16px;
+	width: 16px;
+	height: 16px;
+	font-size: 9px;
+	line-height: 14px;
+	border-radius: 8px;
 }
 
 #ypt-search-prev:hover:not(:disabled),
