@@ -1,7 +1,16 @@
+ytd-browse {
+	overflow: visible !important;
+}
+
 #ypt-search-bar {
-	position: relative;
-	margin: 8px 0 12px;
-	padding: 0 8px;
+	position: sticky;
+	top: calc(var(--ytd-masthead-height, 56px) + 56px);
+	z-index: 1000;
+	background: var(--yt-spec-base-background, #0f0f0f);
+	margin: 0;
+	padding: 12px 8px;
+	border-bottom: 1px solid var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.1));
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 #ypt-search-input {
