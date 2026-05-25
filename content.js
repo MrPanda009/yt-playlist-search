@@ -507,7 +507,7 @@
 		loadState.noGrowthStreak = 0;
 		updateLoadedState(status, loadButton, stopButton);
 
-		const maxNoGrowth = 6;
+		const maxNoGrowth = 15;
 		while (!loadState.stopRequested) {
 			const total = loadState.total;
 			if (
@@ -520,17 +520,25 @@
 
 			const items = getVideoItems();
 			const lastItem = items[items.length - 1];
+			const spinner = document.querySelector("ytd-continuation-item-renderer");
 			
+			if (spinner) {
+				spinner.scrollIntoView({ behavior: "smooth", block: "center" });
+			} else if (lastItem) {
+				lastItem.scrollIntoView({ behavior: "smooth", block: "end" });
+			}
+
 			window.scrollTo({
 				top: document.documentElement.scrollHeight,
 				behavior: "smooth",
 			});
 
-			if (lastItem) {
-				lastItem.scrollIntoView({ behavior: "smooth", block: "end" });
-			}
-
-			await delay(100);
+			await delay(150);
+			window.scrollTo({
+				top: document.documentElement.scrollHeight - 150,
+				behavior: "smooth",
+			});
+			await delay(50);
 			window.scrollTo({
 				top: document.documentElement.scrollHeight,
 				behavior: "smooth",
@@ -538,7 +546,7 @@
 			window.dispatchEvent(new Event("scroll"));
 
 			const previousCount = items.length;
-			const newCount = await waitForNewItems(contents, previousCount, 1500);
+			const newCount = await waitForNewItems(contents, previousCount, 3000);
 			updateLoadedState(status, loadButton, stopButton);
 
 			if (newCount <= previousCount) {
