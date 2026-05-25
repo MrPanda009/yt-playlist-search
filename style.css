@@ -13,6 +13,19 @@ ytd-browse {
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+#ypt-search-bar.ypt-inline {
+	position: static;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0;
+	margin-left: 8px;
+	background: transparent;
+	border-bottom: none;
+	box-shadow: none;
+	flex: 0 1 auto;
+}
+
 #ypt-search-input {
 	width: 100%;
 	box-sizing: border-box;
@@ -23,6 +36,13 @@ ytd-browse {
 	background: var(--yt-spec-base-background, #0f0f0f);
 	color: var(--yt-spec-text-primary, #ffffff);
 	outline: none;
+}
+
+#ypt-search-bar.ypt-inline #ypt-search-input {
+	width: 170px;
+	padding: 6px 10px;
+	font-size: 12px;
+	border-radius: 12px;
 }
 
 #ypt-search-input::placeholder {
@@ -45,6 +65,12 @@ ytd-browse {
 	white-space: nowrap;
 }
 
+#ypt-search-bar.ypt-inline #ypt-search-actions {
+	position: static;
+	transform: none;
+	gap: 4px;
+}
+
 #ypt-search-status {
 	min-width: 56px;
 	text-align: right;
@@ -53,12 +79,22 @@ ytd-browse {
 	opacity: 0.7;
 }
 
+#ypt-search-bar.ypt-inline #ypt-search-status {
+	min-width: auto;
+	font-size: 10px;
+}
+
 #ypt-search-count {
 	min-width: 22px;
 	text-align: right;
 	font-size: 12px;
 	color: var(--yt-spec-text-secondary, rgba(255, 255, 255, 0.7));
 	opacity: 0.75;
+}
+
+#ypt-search-bar.ypt-inline #ypt-search-count {
+	min-width: auto;
+	font-size: 10px;
 }
 
 #ypt-search-load,
@@ -72,6 +108,14 @@ ytd-browse {
 	font-size: 11px;
 	line-height: 20px;
 	cursor: pointer;
+}
+
+#ypt-search-bar.ypt-inline #ypt-search-load,
+#ypt-search-bar.ypt-inline #ypt-search-stop {
+	height: 20px;
+	padding: 0 6px;
+	font-size: 10px;
+	line-height: 18px;
 }
 
 #ypt-search-load:hover:not(:disabled) {
@@ -107,6 +151,14 @@ ytd-browse {
 	cursor: pointer;
 }
 
+#ypt-search-bar.ypt-inline #ypt-search-prev,
+#ypt-search-bar.ypt-inline #ypt-search-next {
+	width: 18px;
+	height: 18px;
+	font-size: 11px;
+	line-height: 16px;
+}
+
 #ypt-search-prev:hover:not(:disabled),
 #ypt-search-next:hover:not(:disabled) {
 	background: var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.12));
@@ -118,13 +170,15 @@ ytd-browse {
 	cursor: default;
 }
 
-ytd-playlist-video-renderer.ypt-highlight {
+ytd-playlist-video-renderer.ypt-highlight,
+ytd-playlist-panel-video-renderer.ypt-highlight {
 	border-left: 4px solid #ff0000;
 	background: rgba(255, 0, 0, 0.08);
 	box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
 }
 
-ytd-playlist-video-renderer.ypt-active {
+ytd-playlist-video-renderer.ypt-active,
+ytd-playlist-panel-video-renderer.ypt-active {
 	border-left-color: #ff0000;
 	box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.6) inset,
 		0 0 12px rgba(255, 0, 0, 0.35);

@@ -10,8 +10,16 @@
 	const SEARCH_STOP_ID = "ypt-search-stop";
 	const HIGHLIGHT_CLASS = "ypt-highlight";
 	const ACTIVE_CLASS = "ypt-active";
+	const CONTEXT = {
+		BROWSE: "browse",
+		WATCH: "watch",
+	};
 
 	let playlistObserver = null;
+	let bootObserver = null;
+	let currentContext = null;
+	let currentRenderer = null;
+	let setupQueued = false;
 	const searchState = {
 		query: "",
 		matches: [],
@@ -27,7 +35,76 @@
 		noGrowthStreak: 0,
 	};
 
-	const getPlaylistParts = () => {
+	const isPlaylistUrl = () => {
+		try {
+			const url = new URL(window.location.href);
+			if (url.pathname === "/playlist") {
+				return true;
+			}
+			return url.pathname === "/watch" && url.searchParams.has("list");
+		} catch (error) {
+			return false;
+		}
+	};
+
+	const resetLoadState = () => {
+		loadState.loaded = 0;
+		loadState.total = null;
+		loadState.totalApprox = false;
+		loadState.totalChecked = false;
+		loadState.isLoading = false;
+		loadState.stopRequested = false;
+		loadState.noGrowthStreak = 0;
+	};
+
+	const isRendererVisible = (renderer) => {
+		if (!renderer) {
+			return false;
+		}
+
+		if (renderer.hasAttribute("hidden")) {
+			return false;
+		}
+
+		if (renderer.getAttribute("aria-hidden") === "true") {
+			return false;
+		}
+
+		const rect = renderer.getBoundingClientRect();
+		return rect.width > 0 && rect.height > 0;
+	};
+
+	const getActiveWatchRenderer = () => {
+		const renderers = Array.from(
+			document.querySelectorAll("ytd-playlist-panel-renderer")
+		);
+		return renderers.find(isRendererVisible) || null;
+	};
+
+	const findWatchActionsRow = (renderer) => {
+		const loopButton = renderer.querySelector(
+			"ytd-playlist-loop-button-renderer"
+		);
+		if (loopButton && loopButton.parentElement) {
+			return loopButton.parentElement;
+		}
+
+		const shuffleButton = renderer.querySelector(
+			"ytd-playlist-shuffle-button-renderer"
+		);
+		if (shuffleButton && shuffleButton.parentElement) {
+			return shuffleButton.parentElement;
+		}
+
+		return (
+			renderer.querySelector("#top-level-buttons") ||
+			renderer.querySelector("#playlist-action-menu") ||
+			renderer.querySelector("#playlist-actions") ||
+			renderer.querySelector("#header")
+		);
+	};
+
+	const getBrowsePlaylistParts = () => {
 		const renderer = document.querySelector(
 			"ytd-playlist-video-list-renderer"
 		);
@@ -40,12 +117,70 @@
 			return null;
 		}
 
-		return { renderer, contents };
+		return {
+			renderer,
+			contents,
+			actionsRow: null,
+			scrollContainer: null,
+			context: CONTEXT.BROWSE,
+		};
 	};
 
-	const ensureSearchBar = (renderer, contents) => {
+	const getWatchPlaylistParts = () => {
+		const renderer = getActiveWatchRenderer();
+		if (!renderer) {
+			return null;
+		}
+
+		const contents =
+			renderer.querySelector("#contents") ||
+			renderer.querySelector("#items") ||
+			renderer;
+		const actionsRow = findWatchActionsRow(renderer);
+		const scrollContainer = contents || renderer;
+
+		return {
+			renderer,
+			contents: contents || renderer,
+			actionsRow,
+			scrollContainer,
+			context: CONTEXT.WATCH,
+		};
+	};
+
+	const getPlaylistParts = () =>
+		getBrowsePlaylistParts() || getWatchPlaylistParts();
+
+	const ensureSearchBar = (renderer, contents, options = {}) => {
+		const { context, actionsRow } = options;
+		const useInline = context === CONTEXT.WATCH;
 		const existing = document.getElementById(SEARCH_BAR_ID);
 		if (existing) {
+			if (useInline) {
+				existing.classList.add("ypt-inline");
+			} else {
+				existing.classList.remove("ypt-inline");
+			}
+
+			if (useInline) {
+				if (actionsRow && existing.parentElement !== actionsRow) {
+					actionsRow.appendChild(existing);
+				} else if (
+					!actionsRow &&
+					renderer &&
+					contents &&
+					existing.parentElement !== renderer
+				) {
+					renderer.insertBefore(existing, contents);
+				}
+			} else if (
+				renderer &&
+				contents &&
+				existing.parentElement !== renderer
+			) {
+				renderer.insertBefore(existing, contents);
+			}
+
 			let input = existing.querySelector(`#${SEARCH_INPUT_ID}`);
 			if (!input) {
 				input = document.createElement("input");
@@ -138,6 +273,9 @@
 
 		const bar = document.createElement("div");
 		bar.id = SEARCH_BAR_ID;
+		if (useInline) {
+			bar.classList.add("ypt-inline");
+		}
 
 		const input = document.createElement("input");
 		input.id = SEARCH_INPUT_ID;
@@ -191,7 +329,13 @@
 		actionsContainer.appendChild(loadButton);
 		actionsContainer.appendChild(stopButton);
 		bar.appendChild(actionsContainer);
-		renderer.insertBefore(bar, contents);
+		if (useInline && actionsRow) {
+			actionsRow.appendChild(bar);
+		} else if (renderer && contents) {
+			renderer.insertBefore(bar, contents);
+		} else if (renderer) {
+			renderer.appendChild(bar);
+		}
 
 		return {
 			input,
@@ -204,8 +348,43 @@
 		};
 	};
 
-	const getVideoItems = () =>
-		Array.from(document.querySelectorAll("ytd-playlist-video-renderer"));
+	const getVideoItems = () => {
+		if (currentContext === CONTEXT.WATCH) {
+			const root =
+				currentRenderer && currentRenderer.isConnected
+					? currentRenderer
+					: document;
+			return Array.from(
+				root.querySelectorAll("ytd-playlist-panel-video-renderer")
+			);
+		}
+
+		if (currentContext === CONTEXT.BROWSE) {
+			return Array.from(
+				document.querySelectorAll("ytd-playlist-video-renderer")
+			);
+		}
+
+		return Array.from(
+			document.querySelectorAll(
+				"ytd-playlist-video-renderer, ytd-playlist-panel-video-renderer"
+			)
+		);
+	};
+
+	const getContinuationItem = () => {
+		if (currentContext === CONTEXT.WATCH) {
+			const root =
+				currentRenderer && currentRenderer.isConnected
+					? currentRenderer
+					: document;
+			return root.querySelector("ytd-continuation-item-renderer");
+		}
+
+		return document.querySelector(
+			"ytd-playlist-video-list-renderer ytd-continuation-item-renderer"
+		);
+	};
 
 	const getTitleText = (item) => {
 		const title = item.querySelector("#video-title");
@@ -378,6 +557,17 @@
 	};
 
 	const getTotalFromDom = () => {
+		if (currentContext === CONTEXT.WATCH) {
+			const root =
+				currentRenderer && currentRenderer.isConnected
+					? currentRenderer
+					: null;
+			const stats = root ? root.querySelector("#stats") : null;
+			if (stats) {
+				return parseTotalFromText(stats.textContent || "");
+			}
+		}
+
 		const stats = document.querySelector(
 			"ytd-playlist-sidebar-primary-info-renderer #stats"
 		);
@@ -457,6 +647,11 @@
 
 	const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+	const isWindowScrollContainer = (container) =>
+		!container ||
+		container === document.documentElement ||
+		container === document.body;
+
 	const waitForNewItems = (contents, previousCount, timeoutMs) =>
 		new Promise((resolve) => {
 			if (!contents) {
@@ -490,6 +685,7 @@
 
 	const autoLoadAll = async (
 		contents,
+		scrollContainer,
 		status,
 		loadButton,
 		stopButton,
@@ -520,7 +716,7 @@
 
 			const items = getVideoItems();
 			const lastItem = items[items.length - 1];
-			const spinner = document.querySelector("ytd-playlist-video-list-renderer ytd-continuation-item-renderer");
+			const spinner = getContinuationItem();
 			
 			if (spinner) {
 				spinner.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -528,22 +724,42 @@
 				lastItem.scrollIntoView({ behavior: "smooth", block: "end" });
 			}
 
-			window.scrollTo({
-				top: document.documentElement.scrollHeight,
-				behavior: "smooth",
-			});
+			if (isWindowScrollContainer(scrollContainer)) {
+				window.scrollTo({
+					top: document.documentElement.scrollHeight,
+					behavior: "smooth",
+				});
 
-			await delay(150);
-			window.scrollTo({
-				top: document.documentElement.scrollHeight - 150,
-				behavior: "smooth",
-			});
-			await delay(50);
-			window.scrollTo({
-				top: document.documentElement.scrollHeight,
-				behavior: "smooth",
-			});
-			window.dispatchEvent(new Event("scroll"));
+				await delay(150);
+				window.scrollTo({
+					top: document.documentElement.scrollHeight - 150,
+					behavior: "smooth",
+				});
+				await delay(50);
+				window.scrollTo({
+					top: document.documentElement.scrollHeight,
+					behavior: "smooth",
+				});
+				window.dispatchEvent(new Event("scroll"));
+			} else {
+				const maxScroll = scrollContainer.scrollHeight;
+				scrollContainer.scrollTo({
+					top: maxScroll,
+					behavior: "smooth",
+				});
+
+				await delay(150);
+				scrollContainer.scrollTo({
+					top: Math.max(0, maxScroll - 150),
+					behavior: "smooth",
+				});
+				await delay(50);
+				scrollContainer.scrollTo({
+					top: maxScroll,
+					behavior: "smooth",
+				});
+				scrollContainer.dispatchEvent(new Event("scroll", { bubbles: true }));
+			}
 
 			const previousCount = items.length;
 			const newCount = await waitForNewItems(contents, previousCount, 3000);
@@ -566,7 +782,7 @@
 				break;
 			}
 
-			const currentSpinner = document.querySelector("ytd-playlist-video-list-renderer ytd-continuation-item-renderer");
+			const currentSpinner = getContinuationItem();
 			if (loadState.noGrowthStreak >= 2 && !currentSpinner) {
 				break;
 			}
@@ -710,6 +926,7 @@
 		loadButton,
 		stopButton,
 		contents,
+		scrollContainer,
 		status,
 		input,
 		count,
@@ -720,6 +937,7 @@
 			loadButton.addEventListener("click", () => {
 				autoLoadAll(
 					contents,
+					scrollContainer,
 					status,
 					loadButton,
 					stopButton,
@@ -773,6 +991,15 @@
 			return false;
 		}
 
+		if (
+			parts.renderer !== currentRenderer ||
+			parts.context !== currentContext
+		) {
+			currentRenderer = parts.renderer;
+			currentContext = parts.context;
+			resetLoadState();
+		}
+
 		const {
 			input,
 			status,
@@ -783,7 +1010,8 @@
 			stopButton,
 		} = ensureSearchBar(
 			parts.renderer,
-			parts.contents
+			parts.contents,
+			parts
 		);
 		if (
 			!input ||
@@ -803,6 +1031,7 @@
 			loadButton,
 			stopButton,
 			parts.contents,
+			parts.scrollContainer,
 			status,
 			input,
 			count,
@@ -827,14 +1056,60 @@
 		return true;
 	};
 
-	const waitForPlaylist = () => {
-		if (setup()) {
+	const queueSetup = () => {
+		if (setupQueued) {
 			return;
 		}
 
-		const bootObserver = new MutationObserver(() => {
-			if (setup()) {
-				bootObserver.disconnect();
+		setupQueued = true;
+		requestAnimationFrame(() => {
+			setupQueued = false;
+			setup();
+		});
+	};
+
+	const shouldQueueSetup = () => {
+		if (!isPlaylistUrl()) {
+			return false;
+		}
+
+		const parts = getPlaylistParts();
+		if (!parts) {
+			return false;
+		}
+
+		const bar = document.getElementById(SEARCH_BAR_ID);
+		if (!bar || !bar.isConnected) {
+			return true;
+		}
+
+		if (parts.context === CONTEXT.WATCH) {
+			if (!isRendererVisible(parts.renderer)) {
+				return true;
+			}
+
+			if (parts.actionsRow) {
+				return bar.parentElement !== parts.actionsRow;
+			}
+
+			return !parts.renderer.contains(bar);
+		}
+
+		if (parts.context === CONTEXT.BROWSE) {
+			return !parts.renderer.contains(bar);
+		}
+
+		return false;
+	};
+
+	const ensureBootObserver = () => {
+		if (bootObserver) {
+			return;
+		}
+
+		bootObserver = new MutationObserver(() => {
+			if (shouldQueueSetup()) {
+				queueSetup();
 			}
 		});
 
@@ -843,6 +1118,23 @@
 			subtree: true,
 		});
 	};
+
+	const waitForPlaylist = () => {
+		if (!isPlaylistUrl()) {
+			return;
+		}
+
+		setup();
+		ensureBootObserver();
+	};
+
+	window.addEventListener("yt-navigate-finish", () => {
+		waitForPlaylist();
+	});
+
+	window.addEventListener("yt-page-data-updated", () => {
+		waitForPlaylist();
+	});
 
 	if (document.readyState === "loading") {
 		document.addEventListener("DOMContentLoaded", waitForPlaylist, {
