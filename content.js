@@ -520,7 +520,7 @@
 
 			const items = getVideoItems();
 			const lastItem = items[items.length - 1];
-			const spinner = document.querySelector("ytd-continuation-item-renderer");
+			const spinner = document.querySelector("ytd-playlist-video-list-renderer ytd-continuation-item-renderer");
 			
 			if (spinner) {
 				spinner.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -563,6 +563,11 @@
 				loadState.total !== null &&
 				loadState.loaded >= loadState.total
 			) {
+				break;
+			}
+
+			const currentSpinner = document.querySelector("ytd-playlist-video-list-renderer ytd-continuation-item-renderer");
+			if (loadState.noGrowthStreak >= 2 && !currentSpinner) {
 				break;
 			}
 
