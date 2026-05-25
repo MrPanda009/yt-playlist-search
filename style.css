@@ -7,7 +7,7 @@
 #ypt-search-input {
 	width: 100%;
 	box-sizing: border-box;
-	padding: 10px 84px 10px 12px;
+	padding: 10px 190px 10px 12px;
 	font-size: 14px;
 	border-radius: 18px;
 	border: 1px solid var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.2));
@@ -33,6 +33,15 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	white-space: nowrap;
+}
+
+#ypt-search-status {
+	min-width: 56px;
+	text-align: right;
+	font-size: 11px;
+	color: var(--yt-spec-text-secondary, rgba(255, 255, 255, 0.7));
+	opacity: 0.7;
 }
 
 #ypt-search-count {
@@ -41,6 +50,38 @@
 	font-size: 12px;
 	color: var(--yt-spec-text-secondary, rgba(255, 255, 255, 0.7));
 	opacity: 0.75;
+}
+
+#ypt-search-load,
+#ypt-search-stop {
+	height: 22px;
+	padding: 0 8px;
+	border-radius: 11px;
+	border: 1px solid var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.2));
+	background: transparent;
+	color: var(--yt-spec-text-secondary, rgba(255, 255, 255, 0.7));
+	font-size: 11px;
+	line-height: 20px;
+	cursor: pointer;
+}
+
+#ypt-search-load:hover:not(:disabled) {
+	background: var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.12));
+}
+
+#ypt-search-stop {
+	border-color: rgba(255, 0, 0, 0.45);
+	color: rgba(255, 120, 120, 0.9);
+}
+
+#ypt-search-stop:hover:not(:disabled) {
+	background: rgba(255, 0, 0, 0.12);
+}
+
+#ypt-search-load:disabled,
+#ypt-search-stop:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 #ypt-search-prev,
