@@ -70,8 +70,12 @@
 			return false;
 		}
 
-		const rect = renderer.getBoundingClientRect();
-		return rect.width > 0 && rect.height > 0;
+		const style = window.getComputedStyle(renderer);
+		if (style.display === "none" || style.visibility === "hidden") {
+			return false;
+		}
+
+		return true;
 	};
 
 	const getActiveWatchRenderer = () => {
