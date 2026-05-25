@@ -520,14 +520,22 @@
 
 			const items = getVideoItems();
 			const lastItem = items[items.length - 1];
+			
+			window.scrollTo({
+				top: document.documentElement.scrollHeight,
+				behavior: "smooth",
+			});
+
 			if (lastItem) {
 				lastItem.scrollIntoView({ behavior: "smooth", block: "end" });
-			} else {
-				window.scrollTo({
-					top: document.documentElement.scrollHeight,
-					behavior: "smooth",
-				});
 			}
+
+			await delay(100);
+			window.scrollTo({
+				top: document.documentElement.scrollHeight,
+				behavior: "smooth",
+			});
+			window.dispatchEvent(new Event("scroll"));
 
 			const previousCount = items.length;
 			const newCount = await waitForNewItems(contents, previousCount, 1500);
