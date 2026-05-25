@@ -1,0 +1,31 @@
+#ypt-search-bar {
+	margin: 8px 0 12px;
+	padding: 0 8px;
+}
+
+#ypt-search-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 10px 12px;
+	font-size: 14px;
+	border-radius: 18px;
+	border: 1px solid var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.2));
+	background: var(--yt-spec-base-background, #0f0f0f);
+	color: var(--yt-spec-text-primary, #ffffff);
+	outline: none;
+}
+
+#ypt-search-input::placeholder {
+	color: var(--yt-spec-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+#ypt-search-input:focus {
+	border-color: var(--yt-spec-call-to-action, #ff0000);
+	box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2);
+}
+
+ytd-playlist-video-renderer.ypt-highlight {
+	border-left: 4px solid #ff0000;
+	background: rgba(255, 0, 0, 0.08);
+	box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+}
