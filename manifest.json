@@ -13,5 +13,10 @@
       "js": ["content.js"],
       "css": ["style.css"]
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "yt-playlist-search@mrpanda009.github.io"
+    }
+  }
 }
