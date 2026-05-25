@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Playlist Search",
+  "version": "0.1",
+  "description": "Search videos within YouTube playlists",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/playlist*"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ]
+}
