@@ -1,17 +1,23 @@
 {
   "manifest_version": 3,
   "name": "YouTube Playlist Search",
-  "version": "0.3",
+  "version": "0.5",
   "description": "Search videos within YouTube playlists",
-  "permissions": ["activeTab"],
+  "permissions": [
+    "activeTab"
+  ],
   "content_scripts": [
     {
       "matches": [
         "https://www.youtube.com/playlist*",
         "https://www.youtube.com/watch*"
       ],
-      "js": ["content.js"],
-      "css": ["style.css"]
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "style.css"
+      ]
     }
   ],
   "browser_specific_settings": {
