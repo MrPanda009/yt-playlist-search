@@ -155,6 +155,23 @@
 	const getPlaylistParts = () =>
 		getBrowsePlaylistParts() || getWatchPlaylistParts();
 
+	const hasChipFilters = () => {
+		const selectors = [
+			"ytd-feed-filter-chip-bar-renderer",
+			"yt-chip-cloud-renderer",
+			"#chips",
+			"#chip-bar",
+			".ytChipBarViewModelChipBarScrollContainer",
+		];
+		for (const selector of selectors) {
+			const el = document.querySelector(selector);
+			if (el && el.offsetHeight > 0) {
+				return true;
+			}
+		}
+		return false;
+	};
+
 	const ensureSearchBar = (renderer, contents, options = {}) => {
 		const { context, actionsRow } = options;
 		const useInline = context === CONTEXT.WATCH;
@@ -721,7 +738,7 @@
 			const items = getVideoItems();
 			const lastItem = items[items.length - 1];
 			const spinner = getContinuationItem();
-			
+
 			if (spinner) {
 				spinner.scrollIntoView({ behavior: "smooth", block: "center" });
 			} else if (lastItem) {
@@ -1017,6 +1034,11 @@
 			parts.contents,
 			parts
 		);
+
+		const bar = document.getElementById(SEARCH_BAR_ID);
+		if (bar && parts.context === CONTEXT.BROWSE) {
+			bar.classList.toggle("ypt-no-chips", !hasChipFilters());
+		}
 		if (
 			!input ||
 			!status ||

@@ -13,6 +13,10 @@ ytd-browse {
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+#ypt-search-bar.ypt-no-chips {
+	top: var(--ytd-masthead-height, 56px);
+}
+
 #ypt-search-bar.ypt-inline {
 	position: relative;
 	top: auto;
