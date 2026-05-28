@@ -1,0 +1,36 @@
+name: Build and Release Browser Extensions
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-assets:
+    name: Package and Upload Extensions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Package Extensions
+        run: npm run package
+
+      - name: Upload Release Assets
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Uploading Chrome Extension (.zip) to Release ${{ github.event.release.tag_name }}..."
+          gh release upload "${{ github.event.release.tag_name }}" dist/yt-playlist-search-chrome.zip --clobber
+          
+          echo "Uploading Firefox Extension (.xpi) to Release ${{ github.event.release.tag_name }}..."
+          gh release upload "${{ github.event.release.tag_name }}" dist/yt-playlist-search-firefox.xpi --clobber

@@ -1,0 +1,17 @@
+{
+  "name": "yt-playlist-search",
+  "version": "1.0.0",
+  "description": "YouTube Playlist Search Extension",
+  "scripts": {
+    "package": "node scripts/package.js"
+  },
+  "keywords": [
+    "youtube",
+    "playlist",
+    "search",
+    "chrome-extension",
+    "firefox-addon"
+  ],
+  "author": "",
+  "license": "MIT"
+}

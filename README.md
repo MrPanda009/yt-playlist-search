@@ -53,6 +53,46 @@ A lightweight browser extension for **Google Chrome** and **Mozilla Firefox** th
 
 ---
 
+## 📦 Local Packaging & Automated Releases
+
+The extension is designed to run natively in both Google Chrome and Mozilla Firefox. To guarantee seamless compatibility, we maintain an automated packaging utility that generates browser-specific variants:
+- **Google Chrome**: Builds a standard `.zip` file utilizing a Manifest V3 background service worker (`background.service_worker`) and stripped of Firefox gecko headers. This is the exact format required for submission to the Chrome Web Store.
+- **Mozilla Firefox**: Builds a standard `.xpi` (XPInstall) file using Manifest V3 event scripts (`background.scripts`) and including the required Gecko extension ID. This is fully ready to be installed directly in Firefox or submitted to the Firefox Add-ons portal.
+
+### 🏃‍♂️ Running the Packager Locally
+
+To generate both extension packages on your local machine:
+
+1. Ensure you have **Node.js** (v16.7.0+) and the command-line utility `zip` installed (default on macOS and most Linux distributions).
+2. Install dependencies (this project is **zero-dependency**, so this is extremely lightweight!):
+   ```bash
+   npm install
+   ```
+3. Run the packaging command:
+   ```bash
+   npm run package
+   ```
+
+Upon completion, a `dist/` directory will be created containing the optimized packages:
+* `dist/yt-playlist-search-chrome.zip` - Ready for Google Chrome / Chromium.
+* `dist/yt-playlist-search-firefox.xpi` - Ready for Mozilla Firefox.
+
+#### How to load the generated local packages:
+- **Chrome**: Unzip `dist/yt-playlist-search-chrome.zip`, go to `chrome://extensions/`, enable Developer Mode, and click **Load unpacked** targeting the extracted directory.
+- **Firefox**: Go to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on...**, and select the `dist/yt-playlist-search-firefox.xpi` file directly.
+
+### 🔄 Automated CI/CD Releases
+
+A automated GitHub Actions workflow is pre-configured in this repository. Whenever you create and publish a new **GitHub Release**:
+1. The workflow triggers automatically.
+2. It spins up a clean Ubuntu runner, checkouts the repository, and sets up Node.js.
+3. It packages both the Chrome `.zip` and Firefox `.xpi` formats.
+4. It utilizes the official GitHub CLI (`gh`) to securely upload both files directly to the published release.
+
+These packages will instantly appear under the **Releases** section of your repository, making it easy for users to download and install them manually!
+
+---
+
 ## 📂 Project Structure
 
 ```

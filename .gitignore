@@ -1,2 +1,4 @@
 .DS_Store
 seo_strategy.md
+dist/
+node_modules/
