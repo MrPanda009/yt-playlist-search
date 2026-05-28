@@ -1156,16 +1156,26 @@
 		return true;
 	};
 
-	const queueSetup = () => {
-		if (setupQueued) {
+	const queueSetup = (attempt = 0) => {
+		if (setupQueued && attempt === 0) {
 			return;
 		}
 
 		setupQueued = true;
-		requestAnimationFrame(() => {
+		const delay = attempt === 0 ? 0 : Math.min(100 * Math.pow(2, attempt - 1), 1000);
+		const run = () => {
 			setupQueued = false;
-			setup();
-		});
+			const success = setup();
+			// If setup failed (renderer not in DOM yet), retry up to 5 times (~3.1s total)
+			if (!success && attempt < 5 && isPlaylistUrl()) {
+				queueSetup(attempt + 1);
+			}
+		};
+		if (delay === 0) {
+			requestAnimationFrame(run);
+		} else {
+			setTimeout(run, delay);
+		}
 	};
 
 	const shouldQueueSetup = () => {
