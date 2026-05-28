@@ -35,6 +35,62 @@
 		noGrowthStreak: 0,
 	};
 
+	const settingsState = {
+		highlightColor: "red",
+		scrollBehavior: "smooth",
+		autoLoadAll: false,
+	};
+
+	const colors = {
+		red: { hex: "#ff0000", rgb: "255, 0, 0" },
+		blue: { hex: "#0088ff", rgb: "0, 136, 255" },
+		green: { hex: "#10b981", rgb: "16, 185, 129" },
+		amber: { hex: "#f59e0b", rgb: "245, 158, 11" },
+		purple: { hex: "#8b5cf6", rgb: "139, 92, 246" }
+	};
+
+	const getScrollBehaviorOption = () =>
+		settingsState.scrollBehavior === "instant" ? "auto" : "smooth";
+
+	const applyHighlightColor = (colorName) => {
+		const colorConfig = colors[colorName] || colors.red;
+		document.documentElement.style.setProperty("--ypt-highlight-color", colorConfig.hex);
+		document.documentElement.style.setProperty("--ypt-highlight-rgb", colorConfig.rgb);
+	};
+
+	const initSettings = () => {
+		const storage = typeof chrome !== "undefined" && chrome.storage ? chrome.storage : (typeof browser !== "undefined" && browser.storage ? browser.storage : null);
+		if (!storage || !storage.sync) {
+			return;
+		}
+
+		storage.sync.get({
+			highlightColor: "red",
+			scrollBehavior: "smooth",
+			autoLoadAll: false
+		}, (items) => {
+			Object.assign(settingsState, items);
+			applyHighlightColor(settingsState.highlightColor);
+		});
+
+		storage.onChanged.addListener((changes, areaName) => {
+			if (areaName === "sync") {
+				let changed = false;
+				for (const [key, value] of Object.entries(changes)) {
+					if (key in settingsState) {
+						settingsState[key] = value.newValue;
+						changed = true;
+					}
+				}
+				if (changed) {
+					applyHighlightColor(settingsState.highlightColor);
+				}
+			}
+		});
+	};
+
+	initSettings();
+
 	const isPlaylistUrl = () => {
 		try {
 			const url = new URL(window.location.href);
@@ -740,44 +796,44 @@
 			const spinner = getContinuationItem();
 
 			if (spinner) {
-				spinner.scrollIntoView({ behavior: "smooth", block: "center" });
+				spinner.scrollIntoView({ behavior: getScrollBehaviorOption(), block: "center" });
 			} else if (lastItem) {
-				lastItem.scrollIntoView({ behavior: "smooth", block: "end" });
+				lastItem.scrollIntoView({ behavior: getScrollBehaviorOption(), block: "end" });
 			}
 
 			if (isWindowScrollContainer(scrollContainer)) {
 				window.scrollTo({
 					top: document.documentElement.scrollHeight,
-					behavior: "smooth",
+					behavior: getScrollBehaviorOption(),
 				});
 
 				await delay(150);
 				window.scrollTo({
 					top: document.documentElement.scrollHeight - 150,
-					behavior: "smooth",
+					behavior: getScrollBehaviorOption(),
 				});
 				await delay(50);
 				window.scrollTo({
 					top: document.documentElement.scrollHeight,
-					behavior: "smooth",
+					behavior: getScrollBehaviorOption(),
 				});
 				window.dispatchEvent(new Event("scroll"));
 			} else {
 				const maxScroll = scrollContainer.scrollHeight;
 				scrollContainer.scrollTo({
 					top: maxScroll,
-					behavior: "smooth",
+					behavior: getScrollBehaviorOption(),
 				});
 
 				await delay(150);
 				scrollContainer.scrollTo({
 					top: Math.max(0, maxScroll - 150),
-					behavior: "smooth",
+					behavior: getScrollBehaviorOption(),
 				});
 				await delay(50);
 				scrollContainer.scrollTo({
 					top: maxScroll,
-					behavior: "smooth",
+					behavior: getScrollBehaviorOption(),
 				});
 				scrollContainer.dispatchEvent(new Event("scroll", { bubbles: true }));
 			}
@@ -906,7 +962,7 @@
 		);
 		const active = setActiveMatch();
 		if (active) {
-			active.scrollIntoView({ behavior: "smooth", block: "center" });
+			active.scrollIntoView({ behavior: getScrollBehaviorOption(), block: "center" });
 		}
 	};
 
@@ -1078,6 +1134,24 @@
 			resetIndex: false,
 		});
 		updateLoadedState(status, loadButton, stopButton);
+
+		if (settingsState.autoLoadAll && !loadState.isLoading && !loadState.stopRequested && loadState.loaded < (loadState.total || 9999)) {
+			setTimeout(() => {
+				if (settingsState.autoLoadAll && !loadState.isLoading && !loadState.stopRequested) {
+					autoLoadAll(
+						parts.contents,
+						parts.scrollContainer,
+						status,
+						loadButton,
+						stopButton,
+						input,
+						count,
+						prevButton,
+						nextButton
+					);
+				}
+			}, 1000);
+		}
 
 		return true;
 	};
