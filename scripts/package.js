@@ -99,8 +99,15 @@ function buildFirefoxManifest() {
   if (!manifest.browser_specific_settings) {
     manifest.browser_specific_settings = {
       gecko: {
-        id: 'yt-playlist-search@mrpanda009.github.io'
+        id: 'yt-playlist-search@mrpanda009.github.io',
+        data_collection_permissions: {
+          required: ['none']
+        }
       }
+    };
+  } else if (manifest.browser_specific_settings.gecko && !manifest.browser_specific_settings.gecko.data_collection_permissions) {
+    manifest.browser_specific_settings.gecko.data_collection_permissions = {
+      required: ['none']
     };
   }
 
