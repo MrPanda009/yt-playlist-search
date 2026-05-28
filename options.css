@@ -22,7 +22,7 @@
 
 body {
   background-color: var(--bg-primary);
-  background-image: linear-gradient(rgba(10, 24, 22, 0.85), rgba(10, 24, 22, 0.85)), url('magicpattern-87PP9Zd7MNo-unsplash.jpg');
+  background-image: linear-gradient(rgba(10, 24, 22, 0.85), rgba(10, 24, 22, 0.85)), url('assets/magicpattern-87PP9Zd7MNo-unsplash.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
