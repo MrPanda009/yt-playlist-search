@@ -114,3 +114,9 @@ yt-playlist-search/
 
 * **Background Art:** Beautiful abstract gradient background by [magicpattern](https://unsplash.com/photos/abstract-blurred-dark-and-light-gradient-87PP9Zd7MNo) on Unsplash.
 * **AI-Assisted Development:** Built with a little help from Gemini Flash ⚡
+
+---
+
+## 📄 License
+
+This project is licensed under the GNU General Public License v3 - see the [LICENSE](LICENSE) file for details.
