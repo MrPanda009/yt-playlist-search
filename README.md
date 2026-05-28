@@ -4,6 +4,15 @@ A lightweight browser extension for **Google Chrome** and **Mozilla Firefox** th
 
 ---
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="assets/Extension%20screenshot.png" width="49%" alt="Extension Search UI" />
+  <img src="assets/Settings%20screenshot.png" width="49%" alt="Glassmorphic Options Panel" />
+</p>
+
+---
+
 ## ✨ Features
 
 - ⚡ **Real-Time Highlighting:** Instantly highlights matches with elegant custom glowing borders and shadows that adapt seamlessly to YouTube's native light and dark modes.
@@ -48,10 +57,20 @@ A lightweight browser extension for **Google Chrome** and **Mozilla Firefox** th
 
 ```
 yt-playlist-search/
-├── manifest.json   # Extension metadata, match patterns, and gecko settings
-├── content.js      # Core DOM queries, auto-loader, and search algorithm
-├── style.css       # Premium sticky layouts, inline wrappers, and animations
-└── icons/          # Extension brand assets and status bar icons
+├── manifest.json       # Extension metadata, match patterns, and gecko settings
+├── content.js          # Core DOM queries, auto-loader, and search algorithm
+├── style.css           # Premium sticky layouts, inline wrappers, and animations
+├── background.js       # Background service worker for extension lifecycle events
+├── options.html        # Premium settings UI with glassmorphism layout
+├── options.css         # Options-specific styles, gradients, and scrollbars
+├── options.js          # Logic, persistence, and GSAP animations for options
+├── assets/             # Extension and settings screenshots
+└── icons/              # Extension brand assets and status bar icons
 ```
 
 ---
+
+## 🎨 Credits & Disclosure
+
+* **Background Art:** Beautiful abstract gradient background by [magicpattern](https://unsplash.com/photos/abstract-blurred-dark-and-light-gradient-87PP9Zd7MNo) on Unsplash.
+* **AI-Assisted Development:** Built with a little help from Gemini Flash ⚡
