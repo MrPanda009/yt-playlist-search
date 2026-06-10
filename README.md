@@ -1,8 +1,13 @@
 # 🔍 YouTube Playlist Search Extension
 
-A lightweight browser extension for **Google Chrome** and **Mozilla Firefox** that injects a powerful, real-time search and navigation interface directly into YouTube playlists. Find any video instantly in playlists of any size.
+[![Firefox Add-on](https://img.shields.io/amo/v/youtube-playlist-search-ext?style=flat-square&color=FF7139&logo=firefox-browser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/youtube-playlist-search-ext/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
+[![Open Source](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=flat-square)](#)
+
+A lightweight, **100% open-source** browser extension for **Google Chrome** and **Mozilla Firefox** that injects a powerful, real-time search and navigation interface directly into YouTube playlists. Find any video instantly in playlists of any size.
 
 ---
+
 
 ## 📸 Screenshots
 
@@ -107,6 +112,14 @@ yt-playlist-search/
 ├── assets/             # Extension and settings screenshots
 └── icons/              # Extension brand assets and status bar icons
 ```
+
+---
+
+## 🤝 Contributing & Open Source
+
+This extension is completely open-source and community-driven. Feel free to:
+- **[Report Bugs or Request Features](https://github.com/MrPanda009/yt-playlist-search/issues)** if you run into any issues or have ideas to make it better.
+- **Submit Pull Requests** to help build features or clean up code. Check out our [improvement ideas list](.system_generated/../improvement_ideas.md) or open an issue to discuss your proposal first!
 
 ---
 
