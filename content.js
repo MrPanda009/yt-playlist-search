@@ -17,8 +17,11 @@
 
 	let playlistObserver = null;
 	let bootObserver = null;
+	let bootCheckScheduled = false;
 	let currentContext = null;
 	let currentRenderer = null;
+	let currentParts = null;
+	let ui = null;
 	let setupQueued = false;
 	const searchState = {
 		query: "",
@@ -36,26 +39,22 @@
 	};
 
 	const settingsState = {
-		highlightColor: "red",
-		scrollBehavior: "smooth",
-		autoLoadAll: false,
-	};
-
-	const colors = {
-		red: { hex: "#ff0000", rgb: "255, 0, 0" },
-		blue: { hex: "#0088ff", rgb: "0, 136, 255" },
-		green: { hex: "#10b981", rgb: "16, 185, 129" },
-		amber: { hex: "#f59e0b", rgb: "245, 158, 11" },
-		purple: { hex: "#8b5cf6", rgb: "139, 92, 246" }
+		highlightColor: YPT_DEFAULT_SETTINGS.highlightColor,
+		customColor: YPT_DEFAULT_SETTINGS.customColor,
+		scrollBehavior: YPT_DEFAULT_SETTINGS.scrollBehavior,
+		autoLoadAll: YPT_DEFAULT_SETTINGS.autoLoadAll,
 	};
 
 	const getScrollBehaviorOption = () =>
 		settingsState.scrollBehavior === "instant" ? "auto" : "smooth";
 
 	const applyHighlightColor = (colorName) => {
-		const colorConfig = colors[colorName] || colors.red;
-		document.documentElement.style.setProperty("--ypt-highlight-color", colorConfig.hex);
-		document.documentElement.style.setProperty("--ypt-highlight-rgb", colorConfig.rgb);
+		const hex =
+			colorName === "custom"
+				? settingsState.customColor || YPT_DEFAULT_SETTINGS.customColor
+				: YPT_COLORS[colorName] || YPT_COLORS.red;
+		document.documentElement.style.setProperty("--ypt-highlight-color", hex);
+		document.documentElement.style.setProperty("--ypt-highlight-rgb", yptHexToRgbStr(hex));
 	};
 
 	const initSettings = () => {
@@ -64,11 +63,7 @@
 			return;
 		}
 
-		storage.sync.get({
-			highlightColor: "red",
-			scrollBehavior: "smooth",
-			autoLoadAll: false
-		}, (items) => {
+		storage.sync.get({ ...settingsState }, (items) => {
 			Object.assign(settingsState, items);
 			applyHighlightColor(settingsState.highlightColor);
 		});
@@ -196,14 +191,12 @@
 			renderer.querySelector("#contents") ||
 			renderer.querySelector("#items") ||
 			renderer;
-		const actionsRow = findWatchActionsRow(renderer);
-		const scrollContainer = contents || renderer;
 
 		return {
 			renderer,
-			contents: contents || renderer,
-			actionsRow,
-			scrollContainer,
+			contents,
+			actionsRow: findWatchActionsRow(renderer),
+			scrollContainer: contents,
 			context: CONTEXT.WATCH,
 		};
 	};
@@ -228,191 +221,70 @@
 		return false;
 	};
 
-	const ensureSearchBar = (renderer, contents, options = {}) => {
-		const { context, actionsRow } = options;
-		const useInline = context === CONTEXT.WATCH;
-		const existing = document.getElementById(SEARCH_BAR_ID);
-		if (existing) {
-			if (useInline) {
-				existing.classList.add("ypt-inline");
+	// Return the child with the given id, creating (and initializing) it once if missing
+	const ensureChild = (parent, tag, id, init, options = {}) => {
+		let el = parent.querySelector(`#${id}`);
+		if (!el) {
+			el = document.createElement(tag);
+			el.id = id;
+			if (init) {
+				init(el);
+			}
+			if (options.first && parent.firstChild) {
+				parent.insertBefore(el, parent.firstChild);
 			} else {
-				existing.classList.remove("ypt-inline");
+				parent.appendChild(el);
 			}
-
-			if (useInline) {
-				if (actionsRow && existing.parentElement !== actionsRow) {
-					actionsRow.appendChild(existing);
-				} else if (
-					!actionsRow &&
-					renderer &&
-					contents &&
-					existing.parentElement !== renderer
-				) {
-					renderer.insertBefore(existing, contents);
-				}
-			} else if (
-				renderer &&
-				contents &&
-				existing.parentElement !== renderer
-			) {
-				renderer.insertBefore(existing, contents);
-			}
-
-			let input = existing.querySelector(`#${SEARCH_INPUT_ID}`);
-			if (!input) {
-				input = document.createElement("input");
-				input.id = SEARCH_INPUT_ID;
-				input.type = "text";
-				input.placeholder = "Search in playlist";
-				input.autocomplete = "off";
-				input.spellcheck = false;
-				existing.insertBefore(input, existing.firstChild);
-			}
-
-			let actionsContainer = existing.querySelector(`#${SEARCH_ACTIONS_ID}`);
-			if (!actionsContainer) {
-				actionsContainer = document.createElement("div");
-				actionsContainer.id = SEARCH_ACTIONS_ID;
-				existing.appendChild(actionsContainer);
-			}
-
-			let status = actionsContainer.querySelector(`#${SEARCH_STATUS_ID}`);
-			if (!status) {
-				status = document.createElement("span");
-				status.id = SEARCH_STATUS_ID;
-				status.textContent = "";
-				actionsContainer.appendChild(status);
-			}
-
-			let count = actionsContainer.querySelector(`#${SEARCH_COUNT_ID}`);
-			if (!count) {
-				count = document.createElement("span");
-				count.id = SEARCH_COUNT_ID;
-				count.textContent = "";
-				count.setAttribute("aria-live", "polite");
-				actionsContainer.appendChild(count);
-			}
-
-			let prevButton = actionsContainer.querySelector(`#${SEARCH_PREV_ID}`);
-			if (!prevButton) {
-				prevButton = document.createElement("button");
-				prevButton.id = SEARCH_PREV_ID;
-				prevButton.type = "button";
-				prevButton.textContent = "<";
-				prevButton.setAttribute("aria-label", "Previous match");
-				actionsContainer.appendChild(prevButton);
-			}
-
-			let nextButton = actionsContainer.querySelector(`#${SEARCH_NEXT_ID}`);
-			if (!nextButton) {
-				nextButton = document.createElement("button");
-				nextButton.id = SEARCH_NEXT_ID;
-				nextButton.type = "button";
-				nextButton.textContent = ">";
-				nextButton.setAttribute("aria-label", "Next match");
-				actionsContainer.appendChild(nextButton);
-			}
-
-			let loadButton = actionsContainer.querySelector(`#${SEARCH_LOAD_ID}`);
-			if (!loadButton) {
-				loadButton = document.createElement("button");
-				loadButton.id = SEARCH_LOAD_ID;
-				loadButton.type = "button";
-				loadButton.textContent = "Load all";
-				loadButton.setAttribute(
-					"aria-label",
-					"Load all playlist videos"
-				);
-				actionsContainer.appendChild(loadButton);
-			}
-
-			let stopButton = actionsContainer.querySelector(`#${SEARCH_STOP_ID}`);
-			if (!stopButton) {
-				stopButton = document.createElement("button");
-				stopButton.id = SEARCH_STOP_ID;
-				stopButton.type = "button";
-				stopButton.textContent = "Stop";
-				stopButton.hidden = true;
-				stopButton.setAttribute("aria-label", "Stop loading");
-				actionsContainer.appendChild(stopButton);
-			}
-
-			return {
-				input,
-				status,
-				count,
-				prevButton,
-				nextButton,
-				loadButton,
-				stopButton,
-			};
 		}
+		return el;
+	};
 
-		const bar = document.createElement("div");
-		bar.id = SEARCH_BAR_ID;
-		if (useInline) {
-			bar.classList.add("ypt-inline");
-		}
+	const buildSearchBarChildren = (bar) => {
+		const input = ensureChild(
+			bar,
+			"input",
+			SEARCH_INPUT_ID,
+			(el) => {
+				el.type = "text";
+				el.placeholder = "Search in playlist";
+				el.autocomplete = "off";
+				el.spellcheck = false;
+			},
+			{ first: true }
+		);
 
-		const input = document.createElement("input");
-		input.id = SEARCH_INPUT_ID;
-		input.type = "text";
-		input.placeholder = "Search in playlist";
-		input.autocomplete = "off";
-		input.spellcheck = false;
+		const actionsContainer = ensureChild(bar, "div", SEARCH_ACTIONS_ID);
 
-		const actionsContainer = document.createElement("div");
-		actionsContainer.id = SEARCH_ACTIONS_ID;
+		const status = ensureChild(actionsContainer, "span", SEARCH_STATUS_ID);
 
-		const status = document.createElement("span");
-		status.id = SEARCH_STATUS_ID;
-		status.textContent = "";
+		const count = ensureChild(actionsContainer, "span", SEARCH_COUNT_ID, (el) => {
+			el.setAttribute("aria-live", "polite");
+		});
 
-		const count = document.createElement("span");
-		count.id = SEARCH_COUNT_ID;
-		count.textContent = "";
-		count.setAttribute("aria-live", "polite");
+		const prevButton = ensureChild(actionsContainer, "button", SEARCH_PREV_ID, (el) => {
+			el.type = "button";
+			el.textContent = "<";
+			el.setAttribute("aria-label", "Previous match");
+		});
 
-		const prevButton = document.createElement("button");
-		prevButton.id = SEARCH_PREV_ID;
-		prevButton.type = "button";
-		prevButton.textContent = "<";
-		prevButton.setAttribute("aria-label", "Previous match");
+		const nextButton = ensureChild(actionsContainer, "button", SEARCH_NEXT_ID, (el) => {
+			el.type = "button";
+			el.textContent = ">";
+			el.setAttribute("aria-label", "Next match");
+		});
 
-		const nextButton = document.createElement("button");
-		nextButton.id = SEARCH_NEXT_ID;
-		nextButton.type = "button";
-		nextButton.textContent = ">";
-		nextButton.setAttribute("aria-label", "Next match");
+		const loadButton = ensureChild(actionsContainer, "button", SEARCH_LOAD_ID, (el) => {
+			el.type = "button";
+			el.textContent = "Load all";
+			el.setAttribute("aria-label", "Load all playlist videos");
+		});
 
-		const loadButton = document.createElement("button");
-		loadButton.id = SEARCH_LOAD_ID;
-		loadButton.type = "button";
-		loadButton.textContent = "Load all";
-		loadButton.setAttribute("aria-label", "Load all playlist videos");
-
-		const stopButton = document.createElement("button");
-		stopButton.id = SEARCH_STOP_ID;
-		stopButton.type = "button";
-		stopButton.textContent = "Stop";
-		stopButton.hidden = true;
-		stopButton.setAttribute("aria-label", "Stop loading");
-
-		bar.appendChild(input);
-		actionsContainer.appendChild(status);
-		actionsContainer.appendChild(count);
-		actionsContainer.appendChild(prevButton);
-		actionsContainer.appendChild(nextButton);
-		actionsContainer.appendChild(loadButton);
-		actionsContainer.appendChild(stopButton);
-		bar.appendChild(actionsContainer);
-		if (useInline && actionsRow) {
-			actionsRow.appendChild(bar);
-		} else if (renderer && contents) {
-			renderer.insertBefore(bar, contents);
-		} else if (renderer) {
-			renderer.appendChild(bar);
-		}
+		const stopButton = ensureChild(actionsContainer, "button", SEARCH_STOP_ID, (el) => {
+			el.type = "button";
+			el.textContent = "Stop";
+			el.hidden = true;
+			el.setAttribute("aria-label", "Stop loading");
+		});
 
 		return {
 			input,
@@ -423,6 +295,32 @@
 			loadButton,
 			stopButton,
 		};
+	};
+
+	const ensureSearchBar = (renderer, contents, options = {}) => {
+		const { context, actionsRow } = options;
+		const useInline = context === CONTEXT.WATCH;
+
+		let bar = document.getElementById(SEARCH_BAR_ID);
+		if (!bar) {
+			bar = document.createElement("div");
+			bar.id = SEARCH_BAR_ID;
+		}
+		bar.classList.toggle("ypt-inline", useInline);
+
+		if (useInline && actionsRow) {
+			if (bar.parentElement !== actionsRow) {
+				actionsRow.appendChild(bar);
+			}
+		} else if (renderer && contents) {
+			if (bar.parentElement !== renderer) {
+				renderer.insertBefore(bar, contents);
+			}
+		} else if (renderer && !bar.parentElement) {
+			renderer.appendChild(bar);
+		}
+
+		return buildSearchBarChildren(bar);
 	};
 
 	const getVideoItems = () => {
@@ -678,31 +576,31 @@
 		}
 	};
 
-	const updateCount = (count, value) => {
-		if (!count) {
+	const updateCount = (value) => {
+		if (!ui) {
 			return;
 		}
 
-		count.textContent = String(value);
+		ui.count.textContent = String(value);
 	};
 
-	const updateStatus = (status) => {
-		if (!status) {
+	const updateStatus = () => {
+		if (!ui) {
 			return;
 		}
 
 		const { loaded, total, totalApprox } = loadState;
 		if (typeof total === "number" && total > 0) {
 			const prefix = totalApprox ? "~" : "";
-			status.textContent = `${loaded} / ${prefix}${total}`;
+			ui.status.textContent = `${loaded} / ${prefix}${total}`;
 			return;
 		}
 
-		status.textContent = `${loaded}`;
+		ui.status.textContent = `${loaded}`;
 	};
 
-	const updateLoadControls = (loadButton, stopButton) => {
-		if (!loadButton || !stopButton) {
+	const updateLoadControls = () => {
+		if (!ui) {
 			return;
 		}
 
@@ -710,16 +608,16 @@
 		const isComplete =
 			total !== null && typeof total === "number" && loadState.loaded >= total;
 
-		loadButton.disabled = loadState.isLoading || isComplete;
-		loadButton.setAttribute("aria-busy", String(loadState.isLoading));
-		stopButton.hidden = !loadState.isLoading;
+		ui.loadButton.disabled = loadState.isLoading || isComplete;
+		ui.loadButton.setAttribute("aria-busy", String(loadState.isLoading));
+		ui.stopButton.hidden = !loadState.isLoading;
 	};
 
-	const updateLoadedState = (status, loadButton, stopButton) => {
+	const updateLoadedState = () => {
 		loadState.loaded = getVideoItems().length;
 		resolveTotalCount();
-		updateStatus(status);
-		updateLoadControls(loadButton, stopButton);
+		updateStatus();
+		updateLoadControls();
 	};
 
 	const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -760,25 +658,17 @@
 			}, timeoutMs);
 		});
 
-	const autoLoadAll = async (
-		contents,
-		scrollContainer,
-		status,
-		loadButton,
-		stopButton,
-		input,
-		count,
-		prevButton,
-		nextButton
-	) => {
-		if (loadState.isLoading) {
+	const autoLoadAll = async () => {
+		if (loadState.isLoading || !currentParts || !ui) {
 			return;
 		}
+
+		const { contents, scrollContainer } = currentParts;
 
 		loadState.isLoading = true;
 		loadState.stopRequested = false;
 		loadState.noGrowthStreak = 0;
-		updateLoadedState(status, loadButton, stopButton);
+		updateLoadedState();
 
 		const maxNoGrowth = 15;
 		while (!loadState.stopRequested) {
@@ -840,7 +730,7 @@
 
 			const previousCount = items.length;
 			const newCount = await waitForNewItems(contents, previousCount, 3000);
-			updateLoadedState(status, loadButton, stopButton);
+			updateLoadedState();
 
 			if (newCount <= previousCount) {
 				loadState.noGrowthStreak += 1;
@@ -873,19 +763,17 @@
 
 		loadState.isLoading = false;
 		loadState.stopRequested = false;
-		updateLoadedState(status, loadButton, stopButton);
-		updateMatches(input.value, count, prevButton, nextButton, {
-			resetIndex: false,
-		});
+		updateLoadedState();
+		updateMatches(ui.input.value, { resetIndex: false });
 	};
 
-	const updateNavigationState = (prevButton, nextButton, hasQuery) => {
+	const updateNavigationState = (hasQuery) => {
 		const hasMatches = searchState.matches.length > 0;
 		const disabled = !hasQuery || !hasMatches;
-		prevButton.disabled = disabled;
-		nextButton.disabled = disabled;
-		prevButton.setAttribute("aria-disabled", String(disabled));
-		nextButton.setAttribute("aria-disabled", String(disabled));
+		ui.prevButton.disabled = disabled;
+		ui.nextButton.disabled = disabled;
+		ui.prevButton.setAttribute("aria-disabled", String(disabled));
+		ui.nextButton.setAttribute("aria-disabled", String(disabled));
 	};
 
 	const setActiveMatch = () => {
@@ -902,7 +790,11 @@
 		return active;
 	};
 
-	const updateMatches = (query, count, prevButton, nextButton, options) => {
+	const updateMatches = (query, options) => {
+		if (!ui) {
+			return;
+		}
+
 		const normalized = query.trim().toLowerCase();
 		const items = getVideoItems();
 
@@ -914,8 +806,8 @@
 			items.forEach((item) =>
 				item.classList.remove(HIGHLIGHT_CLASS, ACTIVE_CLASS)
 			);
-			updateCount(count, "");
-			updateNavigationState(prevButton, nextButton, false);
+			updateCount("");
+			updateNavigationState(false);
 			return;
 		}
 
@@ -930,8 +822,8 @@
 		});
 
 		if (searchState.matches.length === 0) {
-			updateCount(count, "0");
-			updateNavigationState(prevButton, nextButton, true);
+			updateCount("0");
+			updateNavigationState(true);
 			return;
 		}
 
@@ -944,8 +836,8 @@
 		}
 
 		setActiveMatch();
-		updateCount(count, searchState.matches.length);
-		updateNavigationState(prevButton, nextButton, true);
+		updateCount(searchState.matches.length);
+		updateNavigationState(true);
 	};
 
 	const stepMatch = (direction) => {
@@ -966,28 +858,24 @@
 		}
 	};
 
-	const attachInputListener = (input, count, prevButton, nextButton) => {
-		if (input.dataset.yptListenerAttached === "true") {
-			return;
+	const attachListeners = () => {
+		const { input, prevButton, nextButton, loadButton, stopButton } = ui;
+
+		if (input.dataset.yptListenerAttached !== "true") {
+			input.addEventListener("input", () => {
+				updateMatches(input.value, { resetIndex: true });
+			});
+
+			input.addEventListener("keydown", (event) => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					stepMatch(1);
+				}
+			});
+
+			input.dataset.yptListenerAttached = "true";
 		}
 
-		input.addEventListener("input", () => {
-			updateMatches(input.value, count, prevButton, nextButton, {
-				resetIndex: true,
-			});
-		});
-
-		input.addEventListener("keydown", (event) => {
-			if (event.key === "Enter") {
-				event.preventDefault();
-				stepMatch(1);
-			}
-		});
-
-		input.dataset.yptListenerAttached = "true";
-	};
-
-	const attachNavListeners = (prevButton, nextButton) => {
 		if (prevButton.dataset.yptListenerAttached !== "true") {
 			prevButton.addEventListener("click", () => stepMatch(-1));
 			prevButton.dataset.yptListenerAttached = "true";
@@ -997,32 +885,10 @@
 			nextButton.addEventListener("click", () => stepMatch(1));
 			nextButton.dataset.yptListenerAttached = "true";
 		}
-	};
 
-	const attachLoadListeners = (
-		loadButton,
-		stopButton,
-		contents,
-		scrollContainer,
-		status,
-		input,
-		count,
-		prevButton,
-		nextButton
-	) => {
 		if (loadButton.dataset.yptListenerAttached !== "true") {
 			loadButton.addEventListener("click", () => {
-				autoLoadAll(
-					contents,
-					scrollContainer,
-					status,
-					loadButton,
-					stopButton,
-					input,
-					count,
-					prevButton,
-					nextButton
-				);
+				autoLoadAll();
 			});
 			loadButton.dataset.yptListenerAttached = "true";
 		}
@@ -1035,25 +901,14 @@
 		}
 	};
 
-	const observePlaylist = (
-		contents,
-		input,
-		status,
-		count,
-		prevButton,
-		nextButton,
-		loadButton,
-		stopButton
-	) => {
+	const observePlaylist = (contents) => {
 		if (playlistObserver) {
 			playlistObserver.disconnect();
 		}
 
 		playlistObserver = new MutationObserver(() => {
-			updateMatches(input.value, count, prevButton, nextButton, {
-				resetIndex: false,
-			});
-			updateLoadedState(status, loadButton, stopButton);
+			updateMatches(ui.input.value, { resetIndex: false });
+			updateLoadedState();
 		});
 
 		playlistObserver.observe(contents, {
@@ -1076,79 +931,24 @@
 			currentContext = parts.context;
 			resetLoadState();
 		}
+		currentParts = parts;
 
-		const {
-			input,
-			status,
-			count,
-			prevButton,
-			nextButton,
-			loadButton,
-			stopButton,
-		} = ensureSearchBar(
-			parts.renderer,
-			parts.contents,
-			parts
-		);
+		ui = ensureSearchBar(parts.renderer, parts.contents, parts);
 
 		const bar = document.getElementById(SEARCH_BAR_ID);
 		if (bar && parts.context === CONTEXT.BROWSE) {
 			bar.classList.toggle("ypt-no-chips", !hasChipFilters());
 		}
-		if (
-			!input ||
-			!status ||
-			!count ||
-			!prevButton ||
-			!nextButton ||
-			!loadButton ||
-			!stopButton
-		) {
-			return true;
-		}
 
-		attachInputListener(input, count, prevButton, nextButton);
-		attachNavListeners(prevButton, nextButton);
-		attachLoadListeners(
-			loadButton,
-			stopButton,
-			parts.contents,
-			parts.scrollContainer,
-			status,
-			input,
-			count,
-			prevButton,
-			nextButton
-		);
-		observePlaylist(
-			parts.contents,
-			input,
-			status,
-			count,
-			prevButton,
-			nextButton,
-			loadButton,
-			stopButton
-		);
-		updateMatches(input.value, count, prevButton, nextButton, {
-			resetIndex: false,
-		});
-		updateLoadedState(status, loadButton, stopButton);
+		attachListeners();
+		observePlaylist(parts.contents);
+		updateMatches(ui.input.value, { resetIndex: false });
+		updateLoadedState();
 
 		if (settingsState.autoLoadAll && !loadState.isLoading && !loadState.stopRequested && loadState.loaded < (loadState.total || 9999)) {
 			setTimeout(() => {
 				if (settingsState.autoLoadAll && !loadState.isLoading && !loadState.stopRequested) {
-					autoLoadAll(
-						parts.contents,
-						parts.scrollContainer,
-						status,
-						loadButton,
-						stopButton,
-						input,
-						count,
-						prevButton,
-						nextButton
-					);
+					autoLoadAll();
 				}
 			}, 1000);
 		}
@@ -1217,10 +1017,19 @@
 			return;
 		}
 
+		// YouTube mutates the DOM constantly; throttle the (expensive)
+		// shouldQueueSetup check to at most once per 250ms, trailing edge.
 		bootObserver = new MutationObserver(() => {
-			if (shouldQueueSetup()) {
-				queueSetup();
+			if (bootCheckScheduled) {
+				return;
 			}
+			bootCheckScheduled = true;
+			setTimeout(() => {
+				bootCheckScheduled = false;
+				if (shouldQueueSetup()) {
+					queueSetup();
+				}
+			}, 250);
 		});
 
 		bootObserver.observe(document.documentElement, {

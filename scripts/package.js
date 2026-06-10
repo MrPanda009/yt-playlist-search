@@ -11,6 +11,7 @@ const firefoxDir = path.join(distDir, 'firefox');
 // List of core files to copy directly
 const coreFiles = [
   'background.js',
+  'common.js',
   'content.js',
   'style.css',
   'options.html',
@@ -42,14 +43,15 @@ function copyFiles(targetDir) {
     }
   });
 
-  // Copy icons folder (excluding system files like .DS_Store)
+  // Copy only the sized PNG icons referenced by the manifest and background
+  // script (skips SVG sources, un-sized PNGs, and system files like .DS_Store)
   const srcIconsDir = path.join(rootDir, 'icons');
   const destIconsDir = path.join(targetDir, 'icons');
   if (fs.existsSync(srcIconsDir)) {
     fs.mkdirSync(destIconsDir, { recursive: true });
     const iconFiles = fs.readdirSync(srcIconsDir);
     iconFiles.forEach(file => {
-      if (file === '.DS_Store') return;
+      if (!/-\d+\.png$/.test(file)) return;
       fs.copyFileSync(path.join(srcIconsDir, file), path.join(destIconsDir, file));
     });
   } else {
@@ -57,14 +59,17 @@ function copyFiles(targetDir) {
   }
 }
 
-function buildChromeManifest() {
-  console.log('🔧 Building Google Chrome manifest...');
+function readManifest() {
   const manifestPath = path.join(rootDir, 'manifest.json');
   if (!fs.existsSync(manifestPath)) {
     throw new Error('manifest.json not found in root directory!');
   }
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+function buildChromeManifest() {
+  console.log('🔧 Building Google Chrome manifest...');
+  const manifest = readManifest();
 
   // Configure Chrome MV3 background (Service Worker ONLY, no background scripts array)
   manifest.background = {
@@ -83,12 +88,7 @@ function buildChromeManifest() {
 
 function buildFirefoxManifest() {
   console.log('🔧 Building Mozilla Firefox manifest...');
-  const manifestPath = path.join(rootDir, 'manifest.json');
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error('manifest.json not found in root directory!');
-  }
-
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const manifest = readManifest();
 
   // Configure Firefox MV3 background (Event Script array, no service worker)
   manifest.background = {
