@@ -57,6 +57,19 @@ function copyFiles(targetDir) {
   } else {
     console.warn('⚠️ Warning: icons folder not found.');
   }
+
+  // Copy options background image asset
+  const srcAssetsDir = path.join(rootDir, 'assets');
+  const destAssetsDir = path.join(targetDir, 'assets');
+  if (fs.existsSync(srcAssetsDir)) {
+    fs.mkdirSync(destAssetsDir, { recursive: true });
+    const bgImage = 'magicpattern-87PP9Zd7MNo-unsplash.jpg';
+    if (fs.existsSync(path.join(srcAssetsDir, bgImage))) {
+      fs.copyFileSync(path.join(srcAssetsDir, bgImage), path.join(destAssetsDir, bgImage));
+    }
+  } else {
+    console.warn('⚠️ Warning: assets folder not found.');
+  }
 }
 
 function readManifest() {
