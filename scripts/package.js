@@ -113,15 +113,19 @@ function buildFirefoxManifest() {
     manifest.browser_specific_settings = {
       gecko: {
         id: 'yt-playlist-search-ext@mrpanda009.github.io',
+        strict_min_version: '140.0',
         data_collection_permissions: {
           required: ['none']
         }
       }
     };
-  } else if (manifest.browser_specific_settings.gecko && !manifest.browser_specific_settings.gecko.data_collection_permissions) {
-    manifest.browser_specific_settings.gecko.data_collection_permissions = {
-      required: ['none']
-    };
+  } else if (manifest.browser_specific_settings.gecko) {
+    manifest.browser_specific_settings.gecko.strict_min_version = '140.0';
+    if (!manifest.browser_specific_settings.gecko.data_collection_permissions) {
+      manifest.browser_specific_settings.gecko.data_collection_permissions = {
+        required: ['none']
+      };
+    }
   }
 
   fs.writeFileSync(
