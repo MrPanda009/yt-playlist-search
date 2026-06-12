@@ -32,14 +32,11 @@ body {
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 /* Glowing Ambient Backgrounds */
 .glow-bg {
-  position: absolute;
+  position: fixed;
   top: -5%;
   left: 5%;
   width: 60vw;
