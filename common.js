@@ -16,6 +16,7 @@ const YPT_DEFAULT_SETTINGS = {
 	iconTheme: "dark",
 	scrollBehavior: "smooth",
 	autoLoadAll: false,
+	searchMode: "titles",
 };
 
 // Convert a hex color to an "r, g, b" string usable inside rgba()

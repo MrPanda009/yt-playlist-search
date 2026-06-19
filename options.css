@@ -225,6 +225,13 @@ body {
   line-height: 1.4;
 }
 
+.setting-tip {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
 /* Custom Highlight Color Picker */
 .color-picker-grid {
   display: flex;
@@ -308,6 +315,22 @@ body {
 
 .segmented-control:has(.segment-btn:last-child input:checked)::before {
   transform: translateX(100%);
+}
+
+.segmented-control.three-options::before {
+  width: calc(33.333% - 4.667px);
+}
+
+.segmented-control.three-options:has(.segment-btn:nth-child(1) input:checked)::before {
+  transform: translateX(0%);
+}
+
+.segmented-control.three-options:has(.segment-btn:nth-child(2) input:checked)::before {
+  transform: translateX(100%);
+}
+
+.segmented-control.three-options:has(.segment-btn:nth-child(3) input:checked)::before {
+  transform: translateX(200%);
 }
 
 .segment-btn {

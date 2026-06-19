@@ -43,6 +43,7 @@
 		customColor: YPT_DEFAULT_SETTINGS.customColor,
 		scrollBehavior: YPT_DEFAULT_SETTINGS.scrollBehavior,
 		autoLoadAll: YPT_DEFAULT_SETTINGS.autoLoadAll,
+		searchMode: YPT_DEFAULT_SETTINGS.searchMode,
 	};
 
 	const getScrollBehaviorOption = () =>
@@ -57,6 +58,27 @@
 		document.documentElement.style.setProperty("--ypt-highlight-rgb", yptHexToRgbStr(hex));
 	};
 
+	const getPlaceholderText = (mode) => {
+		const isWatch = currentContext === CONTEXT.WATCH;
+		if (mode === "titles") {
+			return isWatch ? "Search by title..." : "Search by title (use @ to search channel)...";
+		}
+		if (mode === "channels") {
+			return "Search by channel name...";
+		}
+		if (mode === "both") {
+			return isWatch ? "Search playlist..." : "Search title or channel...";
+		}
+		return "Search in playlist";
+	};
+
+	const updatePlaceholder = () => {
+		if (!ui || !ui.input) {
+			return;
+		}
+		ui.input.placeholder = getPlaceholderText(settingsState.searchMode);
+	};
+
 	const initSettings = () => {
 		const storage = typeof chrome !== "undefined" && chrome.storage ? chrome.storage : (typeof browser !== "undefined" && browser.storage ? browser.storage : null);
 		if (!storage || !storage.sync) {
@@ -66,19 +88,30 @@
 		storage.sync.get({ ...settingsState }, (items) => {
 			Object.assign(settingsState, items);
 			applyHighlightColor(settingsState.highlightColor);
+			updatePlaceholder();
 		});
 
 		storage.onChanged.addListener((changes, areaName) => {
 			if (areaName === "sync") {
 				let changed = false;
+				let modeChanged = false;
 				for (const [key, value] of Object.entries(changes)) {
 					if (key in settingsState) {
 						settingsState[key] = value.newValue;
 						changed = true;
+						if (key === "searchMode") {
+							modeChanged = true;
+						}
 					}
 				}
 				if (changed) {
 					applyHighlightColor(settingsState.highlightColor);
+					if (modeChanged) {
+						updatePlaceholder();
+						if (ui && ui.input) {
+							updateMatches(ui.input.value, { resetIndex: false });
+						}
+					}
 				}
 			}
 		});
@@ -246,7 +279,7 @@
 			SEARCH_INPUT_ID,
 			(el) => {
 				el.type = "text";
-				el.placeholder = "Search in playlist";
+				el.placeholder = getPlaceholderText(settingsState.searchMode);
 				el.autocomplete = "off";
 				el.spellcheck = false;
 			},
@@ -364,6 +397,30 @@
 	const getTitleText = (item) => {
 		const title = item.querySelector("#video-title");
 		return title ? title.textContent.trim() : "";
+	};
+
+	const getChannelText = (item) => {
+		const selectors = [
+			"ytd-channel-name a",
+			"#channel-name a",
+			"#byline a",
+			"ytd-channel-name",
+			"#channel-name",
+			"#byline-container",
+			"#byline",
+			".ytd-channel-name",
+			"#metadata"
+		];
+		for (const selector of selectors) {
+			const el = item.querySelector(selector);
+			if (el) {
+				const text = el.textContent.trim();
+				if (text) {
+					return text.replace(/\s+/g, ' ');
+				}
+			}
+		}
+		return "";
 	};
 
 	const parseNumberValue = (value) => {
@@ -802,7 +859,17 @@
 		searchState.matches = [];
 		searchState.index = -1;
 
-		if (normalized.length === 0) {
+		let actualMode = settingsState.searchMode;
+		let matchQuery = normalized;
+
+		// Power Search logic using only '@' prefix to trigger channel search
+		if (normalized.startsWith("@")) {
+			actualMode = "channels";
+			matchQuery = normalized.slice(1).trim();
+		}
+
+		// If query is empty OR if power search mode is triggered but the query is only '@' (empty channel name query)
+		if (normalized.length === 0 || (normalized === "@" && matchQuery.length === 0)) {
 			items.forEach((item) =>
 				item.classList.remove(HIGHLIGHT_CLASS, ACTIVE_CLASS)
 			);
@@ -812,8 +879,18 @@
 		}
 
 		items.forEach((item) => {
-			const title = getTitleText(item).toLowerCase();
-			const isMatch = title.includes(normalized);
+			const titleText = getTitleText(item).toLowerCase();
+			const channelText = getChannelText(item).toLowerCase();
+
+			let isMatch = false;
+			if (actualMode === "titles") {
+				isMatch = titleText.includes(matchQuery);
+			} else if (actualMode === "channels") {
+				isMatch = channelText.includes(matchQuery);
+			} else if (actualMode === "both") {
+				isMatch = titleText.includes(matchQuery) || channelText.includes(matchQuery);
+			}
+
 			item.classList.toggle(HIGHLIGHT_CLASS, isMatch);
 			item.classList.remove(ACTIVE_CLASS);
 			if (isMatch) {
@@ -934,6 +1011,7 @@
 		currentParts = parts;
 
 		ui = ensureSearchBar(parts.renderer, parts.contents, parts);
+		updatePlaceholder();
 
 		const bar = document.getElementById(SEARCH_BAR_ID);
 		if (bar && parts.context === CONTEXT.BROWSE) {

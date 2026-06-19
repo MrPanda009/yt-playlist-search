@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const colorBubbles = document.querySelectorAll('.color-bubble');
   const iconThemeRadios = document.querySelectorAll('input[name="iconTheme"]');
   const scrollBehaviorRadios = document.querySelectorAll('input[name="scrollBehavior"]');
+  const searchModeRadios = document.querySelectorAll('input[name="searchMode"]');
   const autoLoadAllCheckbox = document.getElementById('autoLoadAll');
   const customInput = document.getElementById('custom-color-input');
   const customBubble = document.querySelector('.custom-color-bubble');
@@ -67,6 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Auto Load
     autoLoadAllCheckbox.checked = state.autoLoadAll;
+
+    // 5. Search Mode
+    searchModeRadios.forEach(radio => {
+      radio.checked = radio.value === state.searchMode;
+    });
   };
 
   // Load Settings from Sync Storage
@@ -133,6 +139,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event Listeners: Auto Load Switch
   autoLoadAllCheckbox.addEventListener('change', (e) => {
     saveSetting('autoLoadAll', e.target.checked);
+  });
+
+  // Event Listeners: Search Mode radios
+  searchModeRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        saveSetting('searchMode', e.target.value);
+      }
+    });
   });
 
   // 3D Glass Card Tilt Micro-Interaction (Vanilla JS)
